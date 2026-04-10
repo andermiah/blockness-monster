@@ -1,3 +1,7 @@
+// to start a server run 'go run . 8080'
+// the available ports to use are 8080, 8081, 8082
+// to mine a block 'curl http://localhost:8080/mine -d "hello world!"'
+
 package main
 
 import (
@@ -93,6 +97,11 @@ func updatePeersWithNewBlock(block Block) {
 		fmt.Println()
 		if err != nil {
 			fmt.Println("peer unreachable")
+			if i := slices.Index(peers, port); i != -1 {
+					peers = slices.Delete(peers, i, i+1)
+			}
+			fmt.Printf("%s removed from peers", port)
+			continue
 		}
 		if resp.StatusCode == http.StatusConflict {
 			j, _ := json.Marshal(blockchain)
@@ -191,8 +200,10 @@ func main() {
 			return
 		}
 		block := mineBlock(&blockchain, string(body))
-		fmt.Println("block created, trying to update peers...")
-		updatePeersWithNewBlock(block)
+		if len(peers) > 0 {
+			fmt.Println("trying to update peers...")
+			updatePeersWithNewBlock(block)
+		}
 	})
 
 	http.HandleFunc("/recieve", func(w http.ResponseWriter, r *http.Request) {
@@ -207,6 +218,7 @@ func main() {
 			fmt.Println("block passes, adding block to chain")
 			fmt.Fprintf(w, "ok")
 			blockchain.Blocks = append(blockchain.Blocks, block)
+			printBlockchain()
 			fmt.Println()
 		} else {
 			fmt.Println("block does not pass, requesting to sync")
@@ -253,12 +265,6 @@ func main() {
 			return
 		}
 		peerWantsToConnect(string(port))
-		data, err := json.Marshal(blockchain)
-		if err != nil {
-			http.Error(w, "error", http.StatusInternalServerError)
-			return
-		}
-		w.Write(data)
 	})
 
 	port := ":" + os.Args[1]
