@@ -17,7 +17,7 @@ import (
 	"bytes"
 )
 
-// ammount of leading 0's in the hash
+// amount of leading 0's in the hash
 var difficulty int = 2
 var peers []string
 var blockchain Blockchain
